@@ -22,8 +22,8 @@ class UserProfile(db.Model):
         self.set_password(password)  # Hash password before storing
 
     def set_password(self, password):
-        """Hashes the password and stores it."""
-        self.password_hash = generate_password_hash(password)
+        """Hashes the password using PBKDF2-SHA256 to ensure it fits in the database."""
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         """Checks if the provided password matches the stored hash."""
