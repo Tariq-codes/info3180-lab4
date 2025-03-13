@@ -1,5 +1,6 @@
 from . import db
-
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 
 class UserProfile(db.Model):
     # You can use this to change the table name. The default convention is to use
@@ -12,6 +13,21 @@ class UserProfile(db.Model):
     first_name = db.Column(db.String(80))
     last_name = db.Column(db.String(80))
     username = db.Column(db.String(80), unique=True)
+    password_hash = db.Column(db.String(128), nullable=False)  # password column
+
+    def __init__(self, first_name, last_name, username, password):
+        self.first_name = first_name
+        self.last_name = last_name
+        self.username = username
+        self.set_password(password)  # Hash password before storing
+
+    def set_password(self, password):
+        """Hashes the password and stores it."""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Checks if the provided password matches the stored hash."""
+        return check_password_hash(self.password_hash, password)
 
     def is_authenticated(self):
         return True
