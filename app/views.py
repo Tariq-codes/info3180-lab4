@@ -5,6 +5,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from app.models import UserProfile
 from app.forms import LoginForm
+from app.forms import UploadForm
 from werkzeug.security import check_password_hash  
 
 
@@ -25,17 +26,22 @@ def about():
 
 
 @app.route('/upload', methods=['POST', 'GET'])
+@login_required
 def upload():
-    # Instantiate your form class
+    form = UploadForm()
 
-    # Validate file upload on submit
     if form.validate_on_submit():
-        # Get file data and save to your uploads folder
+        file = form.file.data  # Get the uploaded file
+        filename = secure_filename(file.filename)  
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)  
 
-        flash('File Saved', 'success')
-        return redirect(url_for('home')) # Update this to redirect the user to a route that displays all uploaded image files
+        file.save(file_path)  # Save the file to the upload folder
 
-    return render_template('upload.html')
+        flash('File uploaded successfully!', 'success')  # Flash success message
+        return redirect(url_for('upload'))  # Stay on the upload page
+
+    return render_template('upload.html', form=form)
+
 
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -51,11 +57,11 @@ def login():
         user = db.session.execute(db.select(UserProfile).filter_by(username=username)).scalar()
 
         # Check if user exists and if password matches
-        if user and check_password_hash(user.password, password):
+        if user and user.check_password(password):
             login_user(user)  
-            
+
             flash('Successfully logged in!', 'success')  # Flash success message
-            return redirect(url_for("upload"))  # Redirect to the upload form
+            return redirect(url_for("upload"))  # Redirect to upload form
         else:
             flash('Invalid username or password.', 'danger')  # Flash error message
 
