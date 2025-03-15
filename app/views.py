@@ -1,12 +1,13 @@
 import os
 from app import app, db, login_manager
-from flask import render_template, request, redirect, url_for, flash, session, abort
+from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from app.models import UserProfile
 from app.forms import LoginForm
 from app.forms import UploadForm
 from werkzeug.security import check_password_hash  
+
 
 
 ###
@@ -25,9 +26,38 @@ def about():
     return render_template('about.html', name="Mary Jane")
 
 
+def get_uploaded_images():
+    upload_folder = os.path.join(os.getcwd(), 'uploads')
+    image_files = []
+    
+    if os.path.exists(upload_folder):
+        for subdir, dirs, files in os.walk(upload_folder):
+            for file in files:
+                if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    image_files.append(file)  
+    
+    return image_files
+
+
+
+@app.route('/uploads/<filename>')
+def get_image(filename):
+    upload_folder = os.path.abspath(os.path.join(os.getcwd(),'uploads')) 
+    return send_from_directory(upload_folder, filename)
+
+
+@app.route('/files')
+@login_required
+def files():
+    images = get_uploaded_images()  # Get the list of uploaded images
+    return render_template('files.html', images=images)
+
+
+
 @app.route('/upload', methods=['POST', 'GET'])
 @login_required
 def upload():
+    print("User is logged in:", current_user.is_authenticated)
     form = UploadForm()
 
     if form.validate_on_submit():
@@ -35,11 +65,10 @@ def upload():
         filename = secure_filename(file.filename)  
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)  
 
-        file.save(file_path)  # Save the file to the upload folder
+        file.save(file_path)
 
-        flash('File uploaded successfully!', 'success')  # Flash success message
-        return redirect(url_for('upload'))  # Stay on the upload page
-
+        flash('File uploaded successfully!', 'success')  
+        return redirect(url_for('upload'))  
     return render_template('upload.html', form=form)
 
 
